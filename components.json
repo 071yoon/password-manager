@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "lyra",
+  "rsc": false,
+  "tsx": true,
+  "alias": {
+    "components": "./src/renderer/components",
+    "utils": "./src/renderer/lib/utils"
+  },
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "src/renderer/styles.css",
+    "baseColor": "stone",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide"
+}

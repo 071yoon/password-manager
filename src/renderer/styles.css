@@ -1,0 +1,103 @@
+@import url('https://cdn.jsdelivr.net/npm/pretendard/dist/web/variable/pretendardvariable.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --vault-bg: #dde3ee;
+  --vault-border: #cfd7de;
+  --vault-panel: #f2f4f7;
+  --vault-chip: #ffffff;
+  --vault-ink: #1f2937;
+  --radius-sm: 0.35rem;
+  --shadow-vault-soft: 0 10px 30px -26px rgba(0, 0, 0, 0.45);
+  --shadow-vault-strong: 0 10px 24px -16px rgba(0, 0, 0, 0.28);
+  --vault-muted: #6b7280;
+}
+
+.dark {
+  --vault-bg: #0c0f13;
+  --vault-border: #2a3744;
+  --vault-panel: #151c23;
+  --vault-chip: #1a232c;
+  --vault-ink: #e5e7eb;
+  --vault-muted: #9ca3af;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.vault-drag-region {
+  -webkit-app-region: drag;
+}
+
+.vault-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family:
+    'Pretendard Variable',
+    'Pretendard',
+    'Apple SD Gothic Neo',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--vault-ink);
+  background: var(--vault-bg);
+}
+
+::selection {
+  background: rgba(71, 85, 105, 0.3);
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+textarea,
+button {
+  outline: none;
+}
+
+.vault-panel {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--vault-border);
+  background: var(--vault-panel);
+  box-shadow: var(--shadow-vault-soft);
+}
+
+.vault-chip {
+  border-radius: 0.25rem;
+  border: 1px solid var(--vault-border);
+  background: var(--vault-chip);
+}
+
+.vault-entry-card {
+  background: var(--vault-chip);
+}
+
+.vault-strong-shadow {
+  box-shadow: var(--shadow-vault-strong);
+}
+
+@keyframes vault-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vault-fade-up {
+  animation: vault-fade-up 180ms cubic-bezier(0.2, 0.85, 0.35, 1) both;
+}
