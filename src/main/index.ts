@@ -25,8 +25,6 @@ import { loadVault, saveVault } from './storage';
 const FALLBACK_LOCALE = 'en';
 const APP_TITLE = 'Local Password Vault';
 const IS_MAC = process.platform === 'darwin';
-app.setName(APP_TITLE);
-process.title = APP_TITLE;
 const VAULT_PATH = path.join(app.getPath('userData'), 'vault.json');
 
 let unlockedKey: Buffer | null = null;
@@ -331,6 +329,15 @@ function resolveIconPath() {
   return iconPathCandidates.find((entry) => fs.existsSync(entry));
 }
 
+function syncAppIdentity() {
+  app.setName(APP_TITLE);
+  process.title = APP_TITLE;
+  app.setAboutPanelOptions({
+    applicationName: APP_TITLE,
+    applicationVersion: app.getVersion(),
+  });
+}
+
 function createWindow() {
   const iconPath = resolveIconPath();
 
@@ -369,7 +376,7 @@ function createWindow() {
   } else {
     window.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
-  window.setTitle(APP_TITLE);
+  window.setTitle(app.getName());
 }
 
 function isVaultPayloadValid(raw: unknown): raw is VaultFile {
@@ -593,7 +600,7 @@ function registerIpc() {
 }
 
 app.whenReady().then(() => {
-  app.setName(APP_TITLE);
+  syncAppIdentity();
   const iconPath = resolveIconPath();
   if (IS_MAC && iconPath) {
     app.dock.setIcon(iconPath);

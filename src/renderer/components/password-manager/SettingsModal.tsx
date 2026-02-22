@@ -40,6 +40,31 @@ export type SettingsModalLabels = {
   resetVault: string;
 };
 
+const cardClass =
+  'space-y-3 rounded-md border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/40';
+
+function SettingsCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={cardClass}>
+      <div className="space-y-1">
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{title}</h4>
+        {description ? (
+          <p className="text-xs leading-5 text-slate-500 dark:text-zinc-400">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function SettingsModal({
   open,
   onClose,
@@ -71,9 +96,7 @@ export function SettingsModal({
     setNextOptions(options);
   }, [options, open]);
 
-  if (!open) return null;
-
-  const handleExport = async () => {
+  const handleExport = React.useCallback(async () => {
     setIsExporting(true);
     const result = await onExport();
     setIsExporting(false);
@@ -83,9 +106,9 @@ export function SettingsModal({
     if (result.reason === 'cancelled') {
       return;
     }
-  };
+  }, [onExport]);
 
-  const handleImport = async () => {
+  const handleImport = React.useCallback(async () => {
     if (!sourcePassword) {
       return;
     }
@@ -96,7 +119,61 @@ export function SettingsModal({
     if (!result.success) {
       return;
     }
-  };
+  }, [onImport, sourcePassword]);
+
+  const handleLengthChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextLength = Number(event.target.value);
+    if (Number.isNaN(nextLength)) return;
+
+    const clampedLength = Math.max(10, Math.min(40, nextLength));
+    setNextOptions((current) => {
+      if (current.length === clampedLength) {
+        return current;
+      }
+      return { ...current, length: clampedLength };
+    });
+  }, []);
+
+  const handleUppercaseToggle = React.useCallback((checked: boolean) => {
+    setNextOptions((current) => ({
+      ...current,
+      includeUppercase: checked,
+    }));
+  }, []);
+
+  const handleSymbolsToggle = React.useCallback((checked: boolean) => {
+    setNextOptions((current) => ({
+      ...current,
+      includeSymbols: checked,
+    }));
+  }, []);
+
+  const requestReset = React.useCallback(() => {
+    setIsResetConfirmOpen(true);
+  }, []);
+
+  const confirmReset = React.useCallback(() => {
+    setIsResetConfirmOpen(false);
+    void onReset();
+  }, [onReset]);
+
+  const confirmImportPasswordChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setSourcePassword(event.target.value);
+    },
+    [],
+  );
+
+  const handleSave = React.useCallback(() => {
+    onSave(nextOptions);
+    onClose();
+  }, [nextOptions, onClose, onSave]);
+
+  const closeDialog = React.useCallback(() => {
+    setIsResetConfirmOpen(false);
+  }, []);
+
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 p-4 backdrop-blur-md">
@@ -111,10 +188,7 @@ export function SettingsModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="grid gap-4 md:grid-cols-2">
-            <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/40">
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">
-                {labels.passwordGenerationSection}
-              </h4>
+            <SettingsCard title={labels.passwordGenerationSection}>
               <div className="space-y-2">
                 <Label htmlFor="password-length">{labels.passwordLength}</Label>
                 <Input
@@ -123,14 +197,7 @@ export function SettingsModal({
                   min={10}
                   max={40}
                   value={nextOptions.length}
-                  onChange={(event) => {
-                    const nextLength = Number(event.target.value);
-                    if (Number.isNaN(nextLength)) return;
-                    setNextOptions((current) => ({
-                      ...current,
-                      length: Math.max(10, Math.min(40, nextLength)),
-                    }));
-                  }}
+                  onChange={handleLengthChange}
                 />
               </div>
 
@@ -138,10 +205,7 @@ export function SettingsModal({
                 <Checkbox
                   checked={nextOptions.includeUppercase}
                   onCheckedChange={(checked) => {
-                    setNextOptions((current) => ({
-                      ...current,
-                      includeUppercase: Boolean(checked),
-                    }));
+                    handleUppercaseToggle(Boolean(checked));
                   }}
                 />
                 <span>{labels.uppercase}</span>
@@ -151,31 +215,22 @@ export function SettingsModal({
                 <Checkbox
                   checked={nextOptions.includeSymbols}
                   onCheckedChange={(checked) => {
-                    setNextOptions((current) => ({
-                      ...current,
-                      includeSymbols: Boolean(checked),
-                    }));
+                    handleSymbolsToggle(Boolean(checked));
                   }}
                 />
                 <span>{labels.symbols}</span>
               </label>
-            </section>
+            </SettingsCard>
 
-            <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/40">
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">
-                {labels.importVault}
-              </h4>
+            <SettingsCard title={labels.importVault} description={labels.importVaultDescription}>
               <Label htmlFor="import-source-password">{labels.importSourcePassword}</Label>
               <Input
                 id="import-source-password"
                 type="password"
                 value={sourcePassword}
-                onChange={(event) => setSourcePassword(event.target.value)}
+                onChange={confirmImportPasswordChange}
                 placeholder={labels.importSourcePassword}
               />
-              <p className="text-xs leading-5 text-slate-500 dark:text-zinc-400">
-                {labels.importVaultDescription}
-              </p>
               <Button
                 type="button"
                 variant="secondary"
@@ -184,17 +239,9 @@ export function SettingsModal({
               >
                 {labels.importVault}
               </Button>
-            </section>
+            </SettingsCard>
 
-            <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/40">
-              <div className="space-y-1">
-                <h4 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">
-                  {labels.exportVault}
-                </h4>
-                <p className="text-xs leading-5 text-slate-500 dark:text-zinc-400">
-                  {labels.exportVaultDescription}
-                </p>
-              </div>
+            <SettingsCard title={labels.exportVault} description={labels.exportVaultDescription}>
               <Button
                 type="button"
                 variant="secondary"
@@ -203,27 +250,13 @@ export function SettingsModal({
               >
                 {labels.exportVault}
               </Button>
-            </section>
+            </SettingsCard>
 
-            <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/40">
-              <div className="space-y-1">
-                <h4 className="text-sm font-semibold text-slate-700 dark:text-zinc-200">
-                  {labels.vaultResetSection}
-                </h4>
-                <p className="text-xs leading-5 text-slate-500 dark:text-zinc-400">
-                  {labels.resetConfirm}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setIsResetConfirmOpen(true);
-                }}
-              >
+            <SettingsCard title={labels.vaultResetSection} description={labels.resetConfirm}>
+              <Button type="button" variant="secondary" onClick={requestReset}>
                 {labels.resetVault}
               </Button>
-            </section>
+            </SettingsCard>
           </div>
         </div>
 
@@ -231,13 +264,7 @@ export function SettingsModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             {labels.close}
           </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              onSave(nextOptions);
-              onClose();
-            }}
-          >
+          <Button type="button" onClick={handleSave}>
             {labels.save}
           </Button>
         </div>
@@ -249,13 +276,8 @@ export function SettingsModal({
               <AlertDialogDescription>{labels.resetConfirm}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{labels.close}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  setIsResetConfirmOpen(false);
-                  void onReset();
-                }}
-              >
+              <AlertDialogCancel onClick={closeDialog}>{labels.close}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmReset}>
                 {labels.resetVault}
               </AlertDialogAction>
             </AlertDialogFooter>

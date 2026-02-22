@@ -1,12 +1,13 @@
 {
   "name": "local-password-manager",
   "productName": "Local Password Vault",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "description": "Local-only password manager built with Electron and React",
   "private": true,
   "main": "out/main/index.js",
   "build": {
     "appId": "com.localpasswordvault.app",
+    "executableName": "LocalPasswordVault",
     "directories": {
       "buildResources": "resources"
     },
@@ -16,7 +17,8 @@
       "category": "public.app-category.productivity",
       "extendInfo": {
         "CFBundleName": "Local Password Vault",
-        "CFBundleDisplayName": "Local Password Vault"
+        "CFBundleDisplayName": "Local Password Vault",
+        "CFBundleExecutable": "LocalPasswordVault"
       }
     },
     "win": {
