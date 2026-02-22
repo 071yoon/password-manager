@@ -32,6 +32,7 @@ jobs:
       - name: Build renderer and main bundle
         run: yarn build
       - name: Sync package version from tag
+        shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           npm pkg set version="$VERSION" --no-git-tag-version
