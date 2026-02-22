@@ -34,7 +34,7 @@ jobs:
       - name: Sync package version from tag
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          node -e "const fs = require('fs'); const p = require('./package.json'); p.version = process.argv[1]; fs.writeFileSync('package.json', `${JSON.stringify(p, null, 2)}\\n`);" "$VERSION"
+          npm pkg set version="$VERSION" --no-git-tag-version
       - name: Package application
         run: yarn electron-builder ${{ matrix.flags }} --publish never
       - name: Upload artifact
