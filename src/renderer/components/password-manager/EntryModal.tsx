@@ -74,10 +74,10 @@ export function EntryModal({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4">
       <div
-        className={`${panelClass} vault-strong-shadow vault-fade-up w-full max-w-lg bg-white/98 p-5 dark:bg-slate-900`}
+        className={`${panelClass} vault-strong-shadow vault-fade-up w-full max-w-lg bg-white/98 p-5 dark:bg-zinc-900`}
       >
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{title}</h3>
           {error ? (
             <p className="mt-2 flex items-center gap-2 text-sm text-rose-600">
               <AlertCircle size={14} />
@@ -162,7 +162,7 @@ export function EntryModal({
                 <div className="absolute inset-y-0 right-1 flex items-center">
                   <button
                     type="button"
-                    className="inline-flex h-8 w-8 items-center justify-center text-slate-500 dark:text-slate-300"
+                    className="inline-flex h-8 w-8 items-center justify-center text-slate-500 dark:text-zinc-300"
                     onClick={() => setShowPassword((current) => !current)}
                     title={showPassword ? labels.hide : labels.reveal}
                     aria-label={showPassword ? labels.hide : labels.reveal}

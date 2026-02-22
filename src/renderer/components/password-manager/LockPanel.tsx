@@ -45,7 +45,7 @@ export function LockPanel({
               <CardTitle>{title}</CardTitle>
               <CardDescription>{subtitle}</CardDescription>
             </div>
-            <Lock size={22} className="mt-1 text-slate-600 dark:text-slate-300" />
+            <Lock size={22} className="mt-1 text-slate-600 dark:text-zinc-300" />
           </div>
         </CardHeader>
         <CardContent>

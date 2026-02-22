@@ -29,6 +29,7 @@ type UseVaultRuntimeArgs = {
 export type VaultRuntime = {
   state: VaultState;
   entries: EntryMeta[];
+  pendingDeleteEntry: EntryMeta | null;
   filteredEntries: EntryMeta[];
   visibleEntries: EntryMeta[];
   visiblePasswords: Record<string, string>;
@@ -49,8 +50,12 @@ export type VaultRuntime = {
   onReveal: (id: string) => Promise<void>;
   onCopy: (id: string) => Promise<void>;
   onSubmitMaster: (password: string, confirmPassword?: string) => Promise<void>;
+  onExport: () => Promise<{ success: boolean; reason?: string }>;
+  onImport: (sourcePassword: string) => Promise<{ success: boolean; reason?: string; count?: number }>;
   onSubmitEntry: (payload: SubmitEntryPayload) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  requestDelete: (entry: EntryMeta) => void;
+  cancelDelete: () => void;
+  confirmDelete: () => Promise<void>;
   onReset: () => Promise<void>;
   onUnlockCancel: () => void;
   lockVault: () => Promise<void>;
@@ -74,6 +79,7 @@ export function useVaultRuntime({
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [isInitializing, setIsInitializing] = React.useState(true);
+  const [pendingDeleteEntry, setPendingDeleteEntry] = React.useState<EntryMeta | null>(null);
 
   const refreshEntries = React.useCallback(async () => {
     const list = await window.electronAPI.listEntries();
@@ -224,6 +230,41 @@ export function useVaultRuntime({
     ],
   );
 
+  const onExport = React.useCallback(async () => {
+    const result = await window.electronAPI.exportVault();
+    if (!result.success && result.reason !== 'cancelled') {
+      showToast(labels.exportFailed, 'error');
+      return result;
+    }
+
+    if (result.success) {
+      showToast(labels.exportSuccess, 'success');
+    }
+
+    return result;
+  }, [labels.exportFailed, labels.exportSuccess, showToast]);
+
+  const onImport = React.useCallback(
+    async (sourcePassword: string) => {
+      const result = await window.electronAPI.importVault(sourcePassword);
+      if (!result.success) {
+        if (result.reason === 'wrong-password') {
+          showToast(labels.wrongPassword, 'error');
+          return result;
+        }
+        if (result.reason !== 'cancelled') {
+          showToast(labels.importFailed, 'error');
+        }
+        return result;
+      }
+
+      await refreshEntries();
+      showToast(labels.importSuccess, 'success');
+      return result;
+    },
+    [labels.importFailed, labels.importSuccess, labels.wrongPassword, refreshEntries, showToast],
+  );
+
   const onSubmitEntry = React.useCallback(
     async (payload: SubmitEntryPayload) => {
       const normalizedPassword = payload.password ? normalizePasswordForStorage(payload.password) : '';
@@ -252,29 +293,44 @@ export function useVaultRuntime({
     [labels.errorAction, refreshEntries],
   );
 
-  const onDelete = React.useCallback(
-    async (id: string) => {
-      if (!window.confirm(labels.deleteConfirm)) return;
-      const result = await window.electronAPI.deleteEntry(id);
-      if (!result.success) {
-        showToast(labels.errorAction, 'error');
-        return;
-      }
-      await refreshEntries();
-      setEntryVisibility(id);
-    },
-    [labels.deleteConfirm, labels.errorAction, refreshEntries, setEntryVisibility, showToast],
-  );
+  const requestDelete = React.useCallback((entry: EntryMeta) => {
+    setPendingDeleteEntry(entry);
+  }, []);
+
+  const cancelDelete = React.useCallback(() => {
+    setPendingDeleteEntry(null);
+  }, []);
+
+  const confirmDelete = React.useCallback(async () => {
+    if (!pendingDeleteEntry) return;
+    const targetId = pendingDeleteEntry.id;
+    setPendingDeleteEntry(null);
+
+    const result = await window.electronAPI.deleteEntry(targetId);
+    if (!result.success) {
+      showToast(labels.errorAction, 'error');
+      return;
+    }
+    await refreshEntries();
+    showToast(labels.deleteSuccess, 'success');
+    setEntryVisibility(targetId);
+  }, [
+    labels.deleteSuccess,
+    labels.errorAction,
+    pendingDeleteEntry,
+    refreshEntries,
+    setEntryVisibility,
+    showToast,
+  ]);
 
   const onReset = React.useCallback(async () => {
-    if (!window.confirm(labels.resetConfirm)) return;
     await window.electronAPI.resetVault();
     setEntries([]);
     setVisiblePasswords({});
     setSearchQuery('');
     await updateState();
     showToast(labels.reset, 'success');
-  }, [labels.reset, labels.resetConfirm, showToast, updateState]);
+  }, [labels.reset, showToast, updateState]);
 
   const openCreate = React.useCallback(() => {
     setEditingEntry(null);
@@ -298,6 +354,7 @@ export function useVaultRuntime({
   return {
     state,
     entries,
+    pendingDeleteEntry,
     filteredEntries,
     visibleEntries,
     visiblePasswords,
@@ -318,8 +375,12 @@ export function useVaultRuntime({
     onReveal,
     onCopy,
     onSubmitMaster,
+    onExport,
+    onImport,
     onSubmitEntry,
-    onDelete,
+    requestDelete,
+    cancelDelete,
+    confirmDelete,
     onReset,
     onUnlockCancel,
     lockVault,

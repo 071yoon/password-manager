@@ -13,6 +13,16 @@ type WorkspaceRowLabels = {
 };
 
 type SettingsLabels = {
+  exportVault: string;
+  importVault: string;
+  exportVaultDescription: string;
+  importVaultDescription: string;
+  importSourcePassword: string;
+  wrongPassword: string;
+  exportSuccess: string;
+  exportFailed: string;
+  importSuccess: string;
+  importFailed: string;
   settingsTitle: string;
   passwordGenerationSection: string;
   passwordLength: string;
@@ -82,6 +92,16 @@ export function useVaultController(): VaultController {
 
   const settingsLabels = React.useMemo(
     () => ({
+      exportVault: preferences.labels.exportVault,
+      importVault: preferences.labels.importVault,
+      exportVaultDescription: preferences.labels.exportVaultDescription,
+      importVaultDescription: preferences.labels.importVaultDescription,
+      importSourcePassword: preferences.labels.importSourcePassword,
+      wrongPassword: preferences.labels.wrongPassword,
+      exportSuccess: preferences.labels.exportSuccess,
+      exportFailed: preferences.labels.exportFailed,
+      importSuccess: preferences.labels.importSuccess,
+      importFailed: preferences.labels.importFailed,
       settingsTitle: preferences.labels.settingsTitle,
       passwordGenerationSection: preferences.labels.passwordGenerationSection,
       passwordLength: preferences.labels.passwordLength,
@@ -95,8 +115,18 @@ export function useVaultController(): VaultController {
     }),
     [
       preferences.labels.close,
+      preferences.labels.exportFailed,
+      preferences.labels.exportSuccess,
+      preferences.labels.exportVault,
+      preferences.labels.exportVaultDescription,
       preferences.labels.passwordGenerationSection,
       preferences.labels.passwordLength,
+      preferences.labels.importFailed,
+      preferences.labels.importSourcePassword,
+      preferences.labels.importVaultDescription,
+      preferences.labels.importSuccess,
+      preferences.labels.importVault,
+      preferences.labels.wrongPassword,
       preferences.labels.resetConfirm,
       preferences.labels.resetVault,
       preferences.labels.saveSettings,

@@ -24,7 +24,7 @@ type VaultWorkspaceProps = {
   onReveal: (id: string) => void;
   onCopy: (id: string) => void;
   onEdit: (entry: EntryMeta) => void;
-  onDelete: (id: string) => Promise<void> | void;
+  onDelete: (entry: EntryMeta) => void;
   rowLabels: VaultWorkspaceRowLabels;
   showingLabel: string;
   pageStart: number;
@@ -72,7 +72,7 @@ export function VaultWorkspace({
     <section className="vault-panel vault-fade-up p-4">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 items-center gap-3">
-          <p className="shrink-0 text-sm font-medium text-slate-600 dark:text-slate-300">
+          <p className="shrink-0 text-sm font-medium text-slate-600 dark:text-zinc-300">
             {totalItemsLabel}: {totalItemsCount}
           </p>
           <div className="relative flex-1">
@@ -93,7 +93,7 @@ export function VaultWorkspace({
 
       <div className="mt-2">
         {filteredEntriesCount === 0 ? (
-          <p className="rounded-sm border border-dashed border-slate-300/90 bg-slate-100/80 p-6 text-center text-sm text-slate-500 dark:border-slate-700/80 dark:bg-slate-900/40 dark:text-slate-300">
+          <p className="rounded-sm border border-dashed border-slate-300/90 bg-slate-100/80 p-6 text-center text-sm text-slate-500 dark:border-zinc-700/80 dark:bg-zinc-900/40 dark:text-zinc-300">
             {searchQuery ? noMatchText : noEntriesText}
           </p>
         ) : (
@@ -119,9 +119,9 @@ export function VaultWorkspace({
         )}
 
         {filteredEntriesCount > 0 ? (
-          <div className="mt-4 flex flex-col items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <div className="mt-4 flex flex-col items-center gap-2 text-sm text-slate-600 dark:text-zinc-300">
             <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-zinc-400">
                 {showingLabel}: {pageStart}-{pageEnd} / {filteredEntriesCount}
               </p>
               <div className="inline-flex items-center gap-3 justify-self-center">
@@ -134,7 +134,7 @@ export function VaultWorkspace({
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <span className="min-w-16 text-center text-sm font-medium text-slate-700 dark:text-slate-300">
+                <span className="min-w-16 text-center text-sm font-medium text-slate-700 dark:text-zinc-300">
                   {page + 1} / {totalPages}
                 </span>
                 <button

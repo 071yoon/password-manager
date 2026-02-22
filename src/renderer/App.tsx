@@ -1,5 +1,6 @@
 import { EntryModal } from './components/password-manager/EntryModal';
 import { AppChrome } from './components/password-manager/AppChrome';
+import { DeleteEntryDialog } from './components/password-manager/DeleteEntryDialog';
 import { LockPanel } from './components/password-manager/LockPanel';
 import { SettingsModal } from './components/password-manager/SettingsModal';
 import { ToastBanner } from './components/password-manager/ToastBanner';
@@ -9,9 +10,14 @@ import { useVaultController } from './hooks/useVaultController';
 
 function DeveloperSignature() {
   return (
-    <div className="fixed bottom-3 right-4 text-xs text-slate-400 dark:text-slate-500">
+    <a
+      href="https://github.com/071yoon"
+      target="_blank"
+      rel="noreferrer"
+      className="fixed bottom-3 right-4 text-xs text-slate-400 transition hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+    >
       @071yoon
-    </div>
+    </a>
   );
 }
 
@@ -22,7 +28,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[var(--vault-bg)] px-4 py-8">
         <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-3xl items-center justify-center">
-          <p className="vault-panel border-slate-200 bg-white/95 px-6 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300">
+          <p className="vault-panel border-slate-200 bg-white/95 px-6 py-4 text-sm text-slate-600 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-300">
             {controller.labels.loading}
           </p>
         </div>
@@ -62,7 +68,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[var(--vault-bg)] pt-10 text-slate-900 dark:text-slate-100 md:pt-11">
+    <div className="relative min-h-screen bg-[var(--vault-bg)] pt-10 text-slate-900 dark:text-zinc-100 md:pt-11">
       <AppChrome
         labels={controller.labels}
         locale={controller.locale}
@@ -98,7 +104,7 @@ export default function App() {
           onReveal={controller.onReveal}
           onCopy={controller.onCopy}
           onEdit={controller.openEdit}
-          onDelete={controller.onDelete}
+          onDelete={controller.requestDelete}
           rowLabels={controller.workspaceRowLabels}
           showingLabel={controller.labels.showing}
           pageStart={controller.pageStart}
@@ -134,7 +140,10 @@ export default function App() {
         labels={controller.settingsLabels}
         options={controller.passwordOptions}
         onReset={controller.onReset}
+        onExport={controller.onExport}
+        onImport={controller.onImport}
         onSave={controller.setPasswordOptions}
+        disabled={!controller.state.unlocked}
       />
 
       <EntryModal
@@ -146,6 +155,17 @@ export default function App() {
         onGeneratePassword={() => createStrongPassword(controller.passwordOptions)}
         onSubmit={controller.onSubmitEntry}
         labels={controller.entryModalLabels}
+      />
+
+      <DeleteEntryDialog
+        open={!!controller.pendingDeleteEntry}
+        title={controller.labels.delete}
+        description={controller.labels.deleteConfirm}
+        entryTitle={controller.pendingDeleteEntry?.title}
+        cancelLabel={controller.labels.cancel}
+        confirmLabel={controller.labels.delete}
+        onCancel={controller.cancelDelete}
+        onConfirm={controller.confirmDelete}
       />
 
       <DeveloperSignature />

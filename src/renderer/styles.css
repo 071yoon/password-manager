@@ -17,12 +17,12 @@
 }
 
 .dark {
-  --vault-bg: #0c0f13;
-  --vault-border: #2a3744;
-  --vault-panel: #151c23;
-  --vault-chip: #1a232c;
-  --vault-ink: #e5e7eb;
-  --vault-muted: #9ca3af;
+  --vault-bg: #09090b;
+  --vault-border: #27272a;
+  --vault-panel: #111113;
+  --vault-chip: #16161a;
+  --vault-ink: #f4f4f5;
+  --vault-muted: #a1a1aa;
 }
 
 * {
@@ -52,7 +52,7 @@ body {
 }
 
 ::selection {
-  background: rgba(71, 85, 105, 0.3);
+  background: rgba(113, 113, 122, 0.32);
 }
 
 button {

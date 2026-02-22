@@ -34,16 +34,16 @@ export function AppChrome({
 }: AppChromeProps) {
   const hasWindowsControls = isWindowsPlatform();
   const hasMacControls = isMacPlatform();
-  const chromeClass = `vault-drag-region fixed inset-x-0 top-0 z-40 border-b border-black/5 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-[0_1px_0_0_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-900 dark:text-slate-100 ${
+  const chromeClass = `vault-drag-region fixed inset-x-0 top-0 z-40 border-b border-black/5 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-[0_1px_0_0_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-100 ${
     hasMaster && !unlocked ? 'pointer-events-none' : ''
   }`;
 
   return (
     <header className={chromeClass}>
-      <div className="mx-auto flex min-h-8 w-full max-w-[1300px] items-center gap-2 px-2">
+      <div className="flex min-h-8 w-full items-center gap-2 px-2">
         <div
           className={`vault-no-drag flex min-w-0 items-center gap-2 ${
-            hasMacControls ? 'ml-8 md:ml-8' : ''
+            hasMacControls ? 'ml-16 md:ml-16' : ''
           }`}
         >
           <div className="inline-flex h-7 w-7 items-center justify-center rounded-sm bg-slate-900 text-slate-100 ring-1 ring-slate-400/80">
@@ -51,7 +51,7 @@ export function AppChrome({
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-sm font-semibold tracking-tight">{labels.appTitle}</h1>
-            <p className="truncate text-[11px] text-slate-500 dark:text-slate-300">
+            <p className="truncate text-[11px] text-slate-500 dark:text-zinc-300">
               {labels.appTagline}
             </p>
           </div>

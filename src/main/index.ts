@@ -1,5 +1,6 @@
-import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
 import fs from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   CreateEntryInput,
@@ -29,10 +30,10 @@ process.title = APP_TITLE;
 const VAULT_PATH = path.join(app.getPath('userData'), 'vault.json');
 
 let unlockedKey: Buffer | null = null;
-const DEFAULT_WINDOW_WIDTH = 1400;
-const DEFAULT_WINDOW_HEIGHT = 940;
-const MIN_WINDOW_WIDTH = 1280;
-const MIN_WINDOW_HEIGHT = 840;
+const DEFAULT_WINDOW_WIDTH = 1080;
+const DEFAULT_WINDOW_HEIGHT = 780;
+const MIN_WINDOW_WIDTH = 800;
+const MIN_WINDOW_HEIGHT = 560;
 
 function nowIso() {
   return new Date().toISOString();
@@ -67,6 +68,106 @@ function normalizeEntries(entries: VaultEntryRecord[]): EntryMeta[] {
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,
   }));
+}
+
+function isValidMaster(master: unknown): master is MasterRecord {
+  if (!master || typeof master !== 'object') {
+    return false;
+  }
+
+  const candidate = master as MasterRecord;
+  return (
+    candidate.algorithm === 'scrypt' &&
+    typeof candidate.salt === 'string' &&
+    typeof candidate.hash === 'string' &&
+    isValidScryptParams(candidate.params)
+  );
+}
+
+function isValidScryptParams(params: unknown): params is ScryptParams {
+  if (!params || typeof params !== 'object') return false;
+  const candidate = params as ScryptParams;
+  return (
+    Number.isInteger(candidate.N) &&
+    Number.isInteger(candidate.r) &&
+    Number.isInteger(candidate.p) &&
+    Number.isInteger(candidate.keyLen) &&
+    Number.isInteger(candidate.maxmem) &&
+    candidate.N > 0 &&
+    candidate.r > 0 &&
+    candidate.p > 0 &&
+    candidate.keyLen > 0 &&
+    candidate.maxmem > 0
+  );
+}
+
+function isValidPasswordCrypto(value: unknown): value is VaultEntryRecord['passwordCrypto'] {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as VaultEntryRecord['passwordCrypto'];
+  return (
+    candidate.version === 'enc-v1' &&
+    candidate.algorithm === 'aes-256-gcm' &&
+    typeof candidate.iv === 'string' &&
+    typeof candidate.ciphertext === 'string' &&
+    typeof candidate.tag === 'string' &&
+    typeof candidate.aad === 'string'
+  );
+}
+
+function isValidVaultEntry(entry: unknown): entry is VaultEntryRecord {
+  if (!entry || typeof entry !== 'object') {
+    return false;
+  }
+  const candidate = entry as VaultEntryRecord;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.title === 'string' &&
+    typeof candidate.note === 'string' &&
+    typeof candidate.createdAt === 'string' &&
+    typeof candidate.updatedAt === 'string' &&
+    isValidPasswordCrypto(candidate.passwordCrypto)
+  );
+}
+
+function mapEntriesWithCurrentMaster(
+  entries: VaultEntryRecord[],
+  sourceKey: Buffer,
+  destinationKey: Buffer,
+): VaultEntryRecord[] {
+  const result: VaultEntryRecord[] = [];
+  for (const entry of entries) {
+    if (!isValidVaultEntry(entry)) {
+      throw new Error('invalid-file');
+    }
+
+    const plainPassword = decryptPassword(sourceKey, {
+      iv: entry.passwordCrypto.iv,
+      ciphertext: entry.passwordCrypto.ciphertext,
+      tag: entry.passwordCrypto.tag,
+      aad: entry.passwordCrypto.aad,
+    });
+    const nextId = randomId();
+    const crypt = encryptPassword(destinationKey, plainPassword, nextId);
+
+    result.push({
+      id: nextId,
+      title: entry.title,
+      note: entry.note,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+      passwordCrypto: {
+        version: 'enc-v1',
+        algorithm: 'aes-256-gcm',
+        iv: crypt.iv,
+        ciphertext: crypt.ciphertext,
+        tag: crypt.tag,
+        aad: nextId,
+      },
+    });
+  }
+  return result;
 }
 
 async function getVaultState() {
@@ -255,12 +356,44 @@ function createWindow() {
     },
   });
 
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
+
   if (process.env.NODE_ENV === 'development') {
     window.loadURL('http://localhost:5173');
   } else {
     window.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
   window.setTitle(APP_TITLE);
+}
+
+function isVaultPayloadValid(raw: unknown): raw is VaultFile {
+  const candidate = raw as VaultFile;
+  return (
+    !!raw &&
+    typeof raw === 'object' &&
+    raw !== null &&
+    'version' in raw &&
+    'master' in raw &&
+    'entries' in raw &&
+    candidate.version === '1.0.0' &&
+    typeof candidate.updatedAt === 'string' &&
+    isValidMaster(candidate.master) &&
+    Array.isArray(candidate.entries) &&
+    candidate.entries.every(isValidVaultEntry)
+  );
+}
+
+function getVaultImportError(error: unknown) {
+  if (error instanceof Error && error.message === 'ERR_OSSL_EVP_BAD_DECRYPT') {
+    return 'decryption-failed';
+  }
+  return 'invalid-file';
 }
 
 function registerIpc() {
@@ -338,6 +471,113 @@ function registerIpc() {
     }
     clipboard.writeText(value);
     return { success: true };
+  });
+
+  ipcMain.handle('vault:export', async () => {
+    if (!unlockedKey) {
+      return { success: false, reason: 'locked' };
+    }
+
+    const filePath = await dialog
+      .showSaveDialog({
+        title: 'Export vault',
+        defaultPath: path.join(app.getPath('documents'), `vault-backup-${Date.now()}.json`),
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+        properties: ['createDirectory', 'showOverwriteConfirmation'],
+        buttonLabel: 'Export',
+      })
+      .then((result) => {
+        if (result.canceled || !result.filePath) {
+          return null;
+        }
+        return result.filePath;
+      });
+
+    if (!filePath) {
+      return { success: false, reason: 'cancelled' };
+    }
+
+    const vault = await readVault();
+    try {
+      await writeFile(filePath, JSON.stringify(vault, null, 2), 'utf8');
+    } catch {
+      return { success: false, reason: 'invalid-file' };
+    }
+    return { success: true, count: vault.entries.length, path: filePath };
+  });
+
+  ipcMain.handle('vault:import', async (_event, sourcePassword: string) => {
+    if (!unlockedKey) {
+      return { success: false, reason: 'locked' };
+    }
+    if (typeof sourcePassword !== 'string' || !sourcePassword) {
+      return { success: false, reason: 'invalid-password' };
+    }
+
+    const filePath = await dialog
+      .showOpenDialog({
+        title: 'Import vault',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+        properties: ['openFile'],
+      })
+      .then((result) => {
+        if (result.canceled || !result.filePaths[0]) {
+          return null;
+        }
+        return result.filePaths[0];
+      });
+    if (!filePath) {
+      return { success: false, reason: 'cancelled' };
+    }
+
+    let rawContent: string;
+    try {
+      rawContent = await readFile(filePath, 'utf8');
+    } catch {
+      return { success: false, reason: 'invalid-file' };
+    }
+
+    let parsed: VaultFile;
+    try {
+      parsed = JSON.parse(rawContent) as VaultFile;
+    } catch {
+      return { success: false, reason: 'invalid-file' };
+    }
+
+    if (!isVaultPayloadValid(parsed)) {
+      return { success: false, reason: 'invalid-file' };
+    }
+
+    const sourceSalt = Buffer.from(parsed.master.salt, 'base64');
+    const sourceHash = Buffer.from(parsed.master.hash, 'base64');
+    let sourceKey: Buffer;
+    try {
+      sourceKey = await deriveMasterKey(sourcePassword, sourceSalt, parsed.master.params);
+    } catch {
+      return { success: false, reason: 'invalid-file' };
+    }
+    const matched = verifyMasterHash(sourceHash, sourceKey);
+    if (!matched) {
+      return { success: false, reason: 'wrong-password' };
+    }
+
+  let nextEntries: VaultEntryRecord[];
+  try {
+      nextEntries = mapEntriesWithCurrentMaster(parsed.entries, sourceKey, unlockedKey as Buffer);
+    } catch (error) {
+      return { success: false, reason: getVaultImportError(error) };
+    }
+
+    const currentVault = await readVault();
+    currentVault.entries = [...currentVault.entries, ...nextEntries];
+    currentVault.updatedAt = nowIso();
+    try {
+      await saveVault(VAULT_PATH, currentVault);
+    } catch {
+      return { success: false, reason: 'invalid-file' };
+    }
+
+    return { success: true, count: nextEntries.length };
   });
 
   ipcMain.handle('vault:reset', async () => {

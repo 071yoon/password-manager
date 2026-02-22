@@ -13,6 +13,8 @@ type DeleteResult = { success: boolean; reason?: string };
 type ListResult = { success: boolean; entries?: EntryMeta[] };
 type RevealResult = { success: boolean; reason?: string; password?: string };
 type CopyResult = { success: boolean; reason?: string };
+type ExportResult = { success: boolean; reason?: string; count?: number; path?: string };
+type ImportResult = { success: boolean; reason?: string; count?: number };
 
 const electronAPI = {
   getLocale: () => ipcRenderer.invoke('app:get-locale') as Promise<string>,
@@ -32,6 +34,9 @@ const electronAPI = {
   copyToClipboard: (value: string) =>
     ipcRenderer.invoke('vault:copy', value) as Promise<CopyResult>,
   resetVault: () => ipcRenderer.invoke('vault:reset') as Promise<{ success: boolean }>,
+  exportVault: () => ipcRenderer.invoke('vault:export') as Promise<ExportResult>,
+  importVault: (sourcePassword: string) =>
+    ipcRenderer.invoke('vault:import', sourcePassword) as Promise<ImportResult>,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
